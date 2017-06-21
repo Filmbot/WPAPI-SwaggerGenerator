@@ -1,0 +1,32 @@
+<?xml version="1.0"?>
+<ruleset name="Nightjar WordPress Coding Standards">
+    <description>The Coding standard for the WordPress Coding Standards itself adjusted for the Nightjar project.</description>
+
+    <rule ref="WordPress-Core">
+		<exclude name="Generic.Files.LowercasedFilename" />
+        <exclude name="Generic.Sniffs.Classes.ClassOpeningStatementSniff" />
+        <exclude name="Generic.Sniffs.WhiteSpace.ControlStructureSpacingSniff" />
+		<exclude name="Generic.Sniffs.WhiteSpace.DisallowTabIndentSniff" />
+        <exclude name="WordPress.NamingConventions.ValidVariableName" />
+        <exclude name="Generic.Functions.OpeningFunctionBraceKernighanRitchie.BraceOnNewLine" />
+        <exclude name="WordPress.WhiteSpace.ControlStructureSpacing.OpenBraceNotSameLine" />
+        <exclude name="WordPress.Files.FileName.UnderscoresNotAllowed"/>
+        <exclude name="WordPress.Classes.ClassOpeningStatement.BraceOnNewLine"/>
+        <exclude name="Squiz.ControlStructures.ControlSignature.SpaceAfterCloseParenthesis"/>
+        <exclude name="Squiz.ControlStructures.ControlSignature.SpaceAfterCloseBrace"/>
+        <exclude name="Squiz.ControlStructures.ControlSignature.SpaceAfterKeyword"/>
+        <exclude name="Squiz.WhiteSpace.SuperfluousWhitespace.EndLine" />
+        <exclude name="WordPress.WhiteSpace.ControlStructureSpacing.ExtraSpaceBeforeOpenParenthesis" />
+        <exclude name="WordPress.PHP.YodaConditions.NotYoda" />
+        <exclude name="WordPress.XSS.EscapeOutput.OutputNotEscaped" />
+        <exclude name="WordPress.PHP.StrictComparisons.LooseComparison" />
+        <exclude name="WordPress.Arrays.ArrayDeclaration.SpaceInEmptyArray" />
+        <exclude name="WordPress.PHP.StrictInArray.MissingTrueStrict" />
+        <exclude name="PEAR.Functions.FunctionCallSignature.Indent" />
+        <exclude name="WordPress.WhiteSpace.ControlStructureSpacing.NoSpaceAfterCloseParenthesis" />
+    </rule>
+    <rule ref="Generic.Functions.OpeningFunctionBraceBsdAllman" />
+    <rule ref="Squiz.ControlStructures.ControlSignature.NewlineAfterOpenBrace" />
+	<rule ref="WordPress-Extra" />
+
+</ruleset>

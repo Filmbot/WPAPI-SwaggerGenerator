@@ -2,13 +2,14 @@
 /**
  * Swagger base class.
  */
-class WP_REST_Swagger_Controller extends WP_REST_Controller {
-	
+class WP_REST_Swagger_Controller extends WP_REST_Controller
+{
+
 
 	/**
 	 * Construct the API handler object.
 	 */
-	public function __construct() 
+	public function __construct()
 	{
 		$this->namespace = 'apigenerate';
 	}
@@ -16,37 +17,40 @@ class WP_REST_Swagger_Controller extends WP_REST_Controller {
 	/**
 	 * Register the meta-related routes.
 	 */
-	public function register_routes() 
+	public function register_routes()
 	{
-		register_rest_route( $this->namespace, '/swagger', array(
-			array(
-				'methods'             => WP_REST_Server::READABLE,
-				'callback'            => array( $this, 'get_swagger' ),
-				'permission_callback' => array( $this, 'get_swagger_permissions_check' ),
-				'args'                => $this->get_swagger_params(),
-			),
+		register_rest_route(
+			$this->namespace, '/swagger', array(
+				array(
+					'methods'             => WP_REST_Server::READABLE,
+					'callback'            => array( $this, 'get_swagger' ),
+					'permission_callback' => array( $this, 'get_swagger_permissions_check' ),
+					'args'                => $this->get_swagger_params(),
+				),
 
-			'schema' => array( $this, 'get_swagger_schema' ),
-		) );
+				'schema' => array( $this, 'get_swagger_schema' ),
+			)
+		);
 	}
-	
-	public function get_swagger_params() 
+
+	public function get_swagger_params()
 	{
 		$new_params = array();
 		return $new_params;
 	}
-	
-	public function get_swagger_permissions_check( $request ) 
+
+	public function get_swagger_permissions_check( $request )
 	{
 		return true;
 	}
-	
-	function getSiteRoot( $path = '' ) 
+
+	function getSiteRoot( $path = '' )
 	{
 		global $wp_rewrite;
 		$rootURL = site_url();
 
-		if ( $wp_rewrite->using_index_permalinks() ) { $rootURL .= '/' . $wp_rewrite->index; }
+		if ( $wp_rewrite->using_index_permalinks() ) { $rootURL .= '/' . $wp_rewrite->index;
+		}
 
 		$rootURL .= '/' . $path;
 
@@ -56,32 +60,37 @@ class WP_REST_Swagger_Controller extends WP_REST_Controller {
 	/**
 	 * Retrieve custom swagger object.
 	 *
-	 * @param WP_REST_Request $request
+	 * @param  WP_REST_Request $request
 	 * @return WP_REST_Request|WP_Error Meta object data on success, WP_Error otherwise
 	 */
-	public function get_swagger( $request ) 
+	public function get_swagger( $request )
 	{
 
 		global $wp_rewrite;
 
-		$title = wp_title( '',0 );
-		list($host, $pathPrefix) = explode( '/', preg_replace( '/(^https?:\/\/|\/$)/','',site_url( '/' ) ), 2 );
-		if ( empty( $title ) ){
+		$title = wp_title( '', 0 );
+		list($host, $pathPrefix) = explode( '/', preg_replace( '/(^https?:\/\/|\/$)/', '', site_url( '/' ) ), 2 );
+		if ( empty( $title ) ) {
 			$title = $host;
 		}
-		
+
 		$apiPath = get_rest_url();
+		$restServer = rest_get_server();
+		$queryParams = $request->get_query_params();
+		$namespace = $queryParams['namespace'] ?? '';
 		$basePath = preg_replace( '#https?://#', '', $apiPath );
 		$basePath = str_replace( $host . '/' . $pathPrefix, '', $basePath );
-		$basePath = preg_replace( '#/$#', '', $basePath );
-		$restServer = rest_get_server();
+		$basePath = preg_replace( '#/$#', '', $basePath ) . ( $namespace ? '/' . $namespace : '' );
 
-		$namespace = $request->get_query_params()['namespace'] ?? '';
 		/* foreach ( $restServer->get_namespaces() as $namespace ) { */
-		$namespaceData = $namespace ? $restServer->get_namespace_index( [
-			'namespace' => $namespace,
-			'context' => null,
-		]	)->data : [];
+		$namespaceData = $namespace ? $restServer->get_namespace_index(
+			[
+				'namespace' => $namespace,
+				'context' => 'help',
+			]
+		)->data : [
+			'routes' => $restServer->get_data_for_routes( $restServer->get_routes(), 'help' ),
+		];
 
 		$swagger = array(
 			'swagger' => '2.0',
@@ -123,15 +132,15 @@ class WP_REST_Swagger_Controller extends WP_REST_Controller {
 					'in' => 'header',
 					'description' => 'Please see http://v2.wp-api.org/guide/authentication/',
 				),
-			 
+
 			),
 		);
-		
+
 		$security = array(
 			array( 'cookieAuth' => array() ),
 		);
 
-		if ( function_exists( 'rest_oauth1_init' ) ){
+		if ( function_exists( 'rest_oauth1_init' ) ) {
 			$swagger['securityDefinitions']['oauth'] = array(
 				'type' => 'oauth2',
 				'x-oauth1' => true,
@@ -146,48 +155,55 @@ class WP_REST_Swagger_Controller extends WP_REST_Controller {
 			$security[] = array( 'oauth' => array( 'basic' ) );
 		}
 
-		if ( class_exists( 'WO_Server' ) ){
+		if ( class_exists( 'WO_Server' ) ) {
 			$rootURL = site_url();
-		
-			if ( $wp_rewrite->using_index_permalinks() ) { $rootURL .= '/' . $wp_rewrite->index; }
-			
+
+			if ( $wp_rewrite->using_index_permalinks() ) { $rootURL .= '/' . $wp_rewrite->index;
+			}
+
 			$swagger['securityDefinitions']['oauth'] = array(
 				'type' => 'oauth2',
 				'flow' => 'accessCode',
 				'authorizationUrl' => $rootURL . '/oauth/authorize',
 				'tokenUrl' => $rootURL . '/oauth/token',
 				'scopes' => array(
-				  'openid' => 'openid',
+					'openid' => 'openid',
 				),
 			);
 			$security[] = array( 'oauth' => array( 'openid' ) );
 		}
-		
-		if ( class_exists( 'Application_Passwords' ) || function_exists( 'json_basic_auth_handler' ) ){
+
+		if ( class_exists( 'Application_Passwords' ) || function_exists( 'json_basic_auth_handler' ) ) {
 			$swagger['securityDefinitions']['basicAuth'] = array(
 				'type' => 'basic',
 			);
 			$security[] = array( 'basicAuth' => array( '' ) );
 		}
-		
-		foreach ( $restServer->get_routes() as $endpointName => $endpoint ){
-			
+
+		foreach ( $namespaceData['routes'] as $endpointName => $endpoint ){
+
 			// don't include self - that's a bit meta
-			if ( $endpointName == '/' . $this->namespace . '/swagger' ) { continue; } 
+			if ( $endpointName == '/' . $this->namespace . '/swagger' ) { 
+				continue;
+			}
 
 			// filter routes by namespace
-			if ( $namespace and strpos( $endpointName, '/' . $namespace ) !== 0 ) { continue; }
+			if ( $namespace and strpos( $endpointName, '/' . $namespace ) !== 0 ) { 
+				continue;
+			}
 
 			$routeopt = $restServer->get_route_options( $endpointName );
-			if ( ! empty( $routeopt['schema'][1] ) ){
-				$schema = call_user_func(array(
-					$routeopt['schema'][0],
-					$routeopt['schema'][1],
-				));
+			if ( ! empty( $routeopt['schema'][1] ) ) {
+				$schema = call_user_func(
+					array(
+						$routeopt['schema'][0],
+						$routeopt['schema'][1],
+					)
+				);
 				$swagger['definitions'][ $schema['title'] ] = $this->schemaIntoDefinition( $schema );
 				$outputSchema = array( '$ref' => '#/definitions/' . $schema['title'] );
-			}else {
-				//if there is no schema then it's a safe bet that this API call 
+			} else {
+				//if there is no schema then it's a safe bet that this API call
 				//will not work - move to the next one.
 				continue;
 			}
@@ -196,7 +212,7 @@ class WP_REST_Swagger_Controller extends WP_REST_Controller {
 			// Replace endpoints var and add to the parameters required
 			$endpointName = preg_replace_callback(
 				'#\(\?P<(\w+?)>.*?\)#',
-				function ( $matches ) use ( &$pathParams ){
+				function ( $matches ) use ( &$pathParams ) {
 					$pathParams[] = $matches[1];
 					return '{' . $matches[1] . '}';
 				},
@@ -204,29 +220,27 @@ class WP_REST_Swagger_Controller extends WP_REST_Controller {
 			);
 			$endpointName = str_replace( site_url(), '', rest_url( $endpointName ) );
 			$endpointName = str_replace( $basePath, '', $endpointName );
-			
-			$groupName = $endpointPart['_groupname'] ?? (
+
+			$groupName = $endpoint['_groupname'] ?? (
 				basename( $endpointName ) == '{id}' ? basename( dirname( $endpointName ) ) : basename( $endpointName )
 			);
 
-			if ( empty( $swagger['paths'][ $endpointName ] ) ){
+			if ( empty( $swagger['paths'][ $endpointName ] ) ) {
 				$swagger['paths'][ $endpointName ] = array(
 					'x-group-name' => $groupName,
-					'x-description' => $endpointPart['_description'] ?? '',
+					'x-description' => $endpoint['_description'] ?? '',
 				);
 			}
 
-			foreach ( $endpoint as $endpointPart ){
-				
-				foreach ( $endpointPart['methods'] as $methodName => $method ){
-					if ( in_array( $methodName,array( 'PUT', 'PATCH' ) ) ) { 
+			foreach ( $endpoint['endpoints'] as $endpointPart ){
+				foreach ( $endpointPart['methods'] as $methodName ){
+					if ( in_array( $methodName, array( 'PUT', 'PATCH' ) ) ) {
 						continue; //duplicated by post
 					}
 
 					$parameters = array();
 					foreach ( $pathParams as $pname ) {
-						if ( $methodName == 'POST' || ! array_key_exists( $pname, $endpointPart['args'] ) )
-						{
+						if ( $methodName == 'POST' || ! array_key_exists( $pname, $endpointPart['args'] ) ) {
 							$parameters[] = array(
 								'name' => $pname,
 								'type' => 'string',
@@ -235,7 +249,7 @@ class WP_REST_Swagger_Controller extends WP_REST_Controller {
 							);
 						}
 					}
-					
+
 					//Clean up parameters
 					foreach ( $endpointPart['args'] as $pname => $pdetails ){
 						if ( in_array( $pname, [ 'context' ] ) ) {
@@ -248,59 +262,64 @@ class WP_REST_Swagger_Controller extends WP_REST_Controller {
 							'in' => $methodName == 'POST' ? 'formData' : ( $isPathParam ? 'path' : 'query' ),
 							'required' => $isPathParam,
 						);
-						if ( ! empty( $pdetails['description'] ) ) { $parameter['description'] = $pdetails['description']; }
-						if ( ! empty( $pdetails['format'] ) ) { $parameter['format'] = $pdetails['format']; }
-						if ( ! empty( $pdetails['default'] ) ) { $parameter['default'] = $pdetails['default']; }
-						if ( ! empty( $pdetails['enum'] ) ) { $parameter['enum'] = $pdetails['enum']; }
-						if ( ! empty( $pdetails['required'] ) ) { $parameter['required'] = $pdetails['required']; }
-						if ( ! empty( $pdetails['minimum'] ) ){
+						if ( ! empty( $pdetails['description'] ) ) { $parameter['description'] = $pdetails['description'];
+						}
+						if ( ! empty( $pdetails['format'] ) ) { $parameter['format'] = $pdetails['format'];
+						}
+						if ( ! empty( $pdetails['default'] ) ) { $parameter['default'] = $pdetails['default'];
+						}
+						if ( ! empty( $pdetails['enum'] ) ) { $parameter['enum'] = $pdetails['enum'];
+						}
+						if ( ! empty( $pdetails['required'] ) ) { $parameter['required'] = $pdetails['required'];
+						}
+						if ( ! empty( $pdetails['minimum'] ) ) {
 							$parameter['minimum'] = $pdetails['minimum'];
 							$parameter['format'] = 'number';
 						}
-						if ( ! empty( $pdetails['maximum'] ) ){
+						if ( ! empty( $pdetails['maximum'] ) ) {
 							$parameter['maximum'] = $pdetails['maximum'];
 							$parameter['format'] = 'number';
 						}
-						if ( ! empty( $pdetails['type'] ) ){
-							if ( $pdetails['type'] == 'array' ){
+						if ( ! empty( $pdetails['type'] ) ) {
+							if ( $pdetails['type'] == 'array' ) {
 								$parameter['type'] = $pdetails['type'];
 								$arrType = $pdetails['items']['type'] ?? 'string';
 								$parameter['items'] = array( 'type' => $arrType );
-							} elseif ( in_array( $pdetails['type'], [ 'string', 'number', 'integer', 'boolean', 'file' ] ) ){
+							} elseif ( in_array( $pdetails['type'], [ 'string', 'number', 'integer', 'boolean', 'file' ] ) ) {
 								$parameter['type'] = $pdetails['type'];
 							} else {
 								$parameter['type'] = 'string';
 								$parameter['format'] = is_string( $pdetails['type'] ) ? $pdetails['type'] : 'string';
 							}
 						}
-						
+
 						$parameters[] = $parameter;
 					}
-					
-					//If the endpoint is not grabbing a specific object then 
+
+					//If the endpoint is not grabbing a specific object then
 					//assume it's returning a list
 					$outputSchemaForMethod = $outputSchema;
-					if ( $methodName == 'GET' && ! preg_match( '/}$/',$endpointName ) ){
+					if ( $methodName == 'GET' && ! preg_match( '/}$/', $endpointName ) ) {
 						$outputSchemaForMethod = array(
 							'type' => 'array',
 							'items' => $outputSchemaForMethod,
 						);
 					}
-					
+
 					$responses = array(
 						'default' => array(
 							'description' => 'error',
 							'schema' => array( '$ref' => '#/definitions/error' ),
 						),
 					);
-					
-					if ( in_array( $methodName,array( 'POST', 'PATCH', 'PUT' ) ) && ! preg_match( '/}$/',$endpointName ) ){
+
+					if ( in_array( $methodName, array( 'POST', 'PATCH', 'PUT' ) ) && ! preg_match( '/}$/', $endpointName ) ) {
 						// This are actually 201's in the default API - but joy of joys this is unreliable
 						$responses[201] = array(
 							'description' => 'successful operation',
 							'schema' => $outputSchemaForMethod,
 						);
-					} elseif ( in_array( $methodName,array( 'DELETE' ) ) ){
+					} elseif ( in_array( $methodName, array( 'DELETE' ) ) ) {
 						$responses[200] = array(
 							'description' => 'successful operation',
 						);
@@ -312,82 +331,90 @@ class WP_REST_Swagger_Controller extends WP_REST_Controller {
 					}
 
 					$swagger['paths'][ $endpointName ][ strtolower( $methodName ) ] = array(
-						'parameters'	=> $parameters,
-						'security'		=> $security,
-						'responses'		=> $responses,
-						'summary'		=> "$methodName $groupName",
+						'parameters'    => $parameters,
+						'security'      => $security,
+						'responses'     => $responses,
+						'summary'       => "$methodName $groupName",
 					);
-					
+
 				}
 			}
 		}
 
 		$response = rest_ensure_response( $swagger );
-		
+
 		return apply_filters( 'rest_prepare_meta_value', $response, $request );
 	}
-	
+
 	/**
 	 * Turns the schema set up by the endpoint into a swagger definition.
 	 *
-	 * @param array $schema
+	 * @param  array $schema
 	 * @return array Definition
 	 */
-	private function schemaIntoDefinition( $schema ) 
+	private function schemaIntoDefinition( $schema )
 	{
-		if ( ! empty( $schema['$schema'] ) ) { unset( $schema['$schema'] ); }
-		if ( ! empty( $schema['title'] ) ) { unset( $schema['title'] ); }
-		if ( isset( $schema['context'] ) ) { unset( $schema['context'] ); }
+		if ( ! empty( $schema['$schema'] ) ) { unset( $schema['$schema'] );
+		}
+		if ( ! empty( $schema['title'] ) ) { unset( $schema['title'] );
+		}
+		if ( isset( $schema['context'] ) ) { unset( $schema['context'] );
+		}
 		foreach ( $schema['properties'] as $name => &$prop ){
-						
-			if ( ! empty( $prop['properties'] ) ){
+
+			if ( ! empty( $prop['properties'] ) ) {
 				/* $prop = $this->schemaIntoDefinition( $prop ); */
 				unset( $prop['properties'] );
 			}
-			
+
 			//-- Changes by Richi
-			if ( ! empty( $prop['enum'] ) ){
-				if ( $prop['enum'][0] == '' ){
-					if ( count( $prop['enum'] ) > 1 ){
-						array_shift( $prop['enum'] );	
+			if ( ! empty( $prop['enum'] ) ) {
+				if ( $prop['enum'][0] == '' ) {
+					if ( count( $prop['enum'] ) > 1 ) {
+						array_shift( $prop['enum'] );
 					}else {
 						$prop['enum'][0] = 'NONE';
 					}
 				};
 			}
 
-			if ( ! isset( $prop['default'] ) && $prop['default'] == null ){
+			if ( ! isset( $prop['default'] ) && $prop['default'] == null ) {
 				unset( $prop['default'] );
 			}
 			//--
 
-			if ( $prop['type'] == 'array' ){
+			if ( $prop['type'] == 'array' ) {
 				$arrType = $prop['items']['type'] ?? 'string';
 				$prop['items'] = array( 'type' => $arrType );
-			} elseif ( ! in_array( $prop['type'], [ 'string', 'number', 'integer', 'boolean', 'file' ] ) ){
+			} elseif ( ! in_array( $prop['type'], [ 'string', 'number', 'integer', 'boolean', 'file' ] ) ) {
 				$prop['type'] = 'string';
 				$prop['format'] = is_string( $prop['type'] ) ? $prop['type'] : 'string';
 			}
 
-			if ( isset( $prop['name'] ) ) { unset( $prop['name'] ); }
-			if ( isset( $prop['required'] ) ) { unset( $prop['required'] ); }
-			if ( isset( $prop['readonly'] ) ) { unset( $prop['readonly'] ); }
-			if ( isset( $prop['context'] ) ) { unset( $prop['context'] ); }
-			if ( isset( $prop['arg_options'] ) ) { unset( $prop['arg_options'] ); }
+			if ( isset( $prop['name'] ) ) { unset( $prop['name'] );
+			}
+			if ( isset( $prop['required'] ) ) { unset( $prop['required'] );
+			}
+			if ( isset( $prop['readonly'] ) ) { unset( $prop['readonly'] );
+			}
+			if ( isset( $prop['context'] ) ) { unset( $prop['context'] );
+			}
+			if ( isset( $prop['arg_options'] ) ) { unset( $prop['arg_options'] );
+			}
 		}
-		
+
 		return $schema;
 	}
-	
+
 	/**
 	 * Get the meta schema, conforming to JSON Schema
 	 *
 	 * @return array
 	 */
-	public function get_swagger_schema() 
+	public function get_swagger_schema()
 	{
-		$schema = json_decode( file_get_contents( dirname( __FILE__ ) . '/schema.json' ),1 );
+		$schema = json_decode( file_get_contents( dirname( __FILE__ ) . '/schema.json' ), 1 );
 		return $schema;
 	}
-	
+
 }
